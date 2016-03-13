@@ -1,7 +1,7 @@
 #include "dispatcher.h"
-#include "request.h"
-#include "reply.h"
 #include "job.h"
+#include "reply.h"
+#include "request.h"
 #include "tags.h"
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
@@ -23,9 +23,11 @@ void dispatch_job_requests(int workers, const char* password) {
     reply_t successful_reply;
     request_t request;
     while (invalid_jobs_sent != workers) {
-        MPI_Iprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &completed, MPI_STATUS_IGNORE);
+        MPI_Iprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &completed,
+                   MPI_STATUS_IGNORE);
         if (completed) {
-            MPI_Recv(&request, 1, REQUEST_DATA_TYPE, MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&request, 1, REQUEST_DATA_TYPE, MPI_ANY_SOURCE,
+                     REQUEST_TAG, MPI_COMM_WORLD, &status);
 
             job_t job;
             if (found_by == -1 && sent_works_until < MAX_PASSWORD) {
@@ -39,15 +41,19 @@ void dispatch_job_requests(int workers, const char* password) {
             }
 
             MPI_Request req;
-            MPI_Isend(&job, 1, JOB_DATA_TYPE, status.MPI_SOURCE, JOB_TAG, MPI_COMM_WORLD, &req);
-            // NB: This doesn't cancel the request, just tells mpi to remove it as
+            MPI_Isend(&job, 1, JOB_DATA_TYPE, status.MPI_SOURCE, JOB_TAG,
+                      MPI_COMM_WORLD, &req);
+            // NB: This doesn't cancel the request, just tells mpi to remove it
+            // as
             // soond as it finish
             MPI_Request_free(&req);
         }
 
-        MPI_Iprobe(MPI_ANY_SOURCE, REPLY_TAG, MPI_COMM_WORLD, &completed, MPI_STATUS_IGNORE);
+        MPI_Iprobe(MPI_ANY_SOURCE, REPLY_TAG, MPI_COMM_WORLD, &completed,
+                   MPI_STATUS_IGNORE);
         if (completed) {
-            MPI_Recv(&reply, 1, REPLY_DATA_TYPE, MPI_ANY_SOURCE, REPLY_TAG, MPI_COMM_WORLD, &status);
+            MPI_Recv(&reply, 1, REPLY_DATA_TYPE, MPI_ANY_SOURCE, REPLY_TAG,
+                     MPI_COMM_WORLD, &status);
             job_done_so_far[status.MPI_SOURCE - 1] += reply.try_count;
             if (reply.is_success) {
                 successful_reply = reply;
@@ -62,16 +68,16 @@ void dispatch_job_requests(int workers, const char* password) {
         return;
     }
 
-    printf("Process %d found the password: %s -> %s\n", found_by, password, successful_reply.decrypted);
+    printf("Process %d found the password: %s -> %s\n", found_by, password,
+           successful_reply.decrypted);
     for (int i = 0; i < workers; ++i) {
         printf("Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
     }
     free(job_done_so_far);
 }
 
-
 void* dispatcher_thread(void* arg) {
-    char** passwords = (char**) arg;
+    char** passwords = (char**)arg;
     int process_count;
 
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
@@ -91,7 +97,8 @@ void* dispatcher_thread(void* arg) {
         printf("Dispatching password %s\n", current);
         for (int i = 1; i < process_count; ++i) {
             MPI_Request req;
-            MPI_Isend(current, CRYPT_PASSWORD_LEN, MPI_CHAR, i, PASSWORD_TAG, MPI_COMM_WORLD, &req);
+            MPI_Isend(current, CRYPT_PASSWORD_LEN, MPI_CHAR, i, PASSWORD_TAG,
+                      MPI_COMM_WORLD, &req);
             MPI_Request_free(&req);
         }
 
@@ -100,7 +107,6 @@ void* dispatcher_thread(void* arg) {
 
         passwords++;
     }
-
 
     // We send an empty string to indicate the end
     char over = '\0';

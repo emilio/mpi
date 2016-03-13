@@ -1,8 +1,8 @@
 #ifndef JOB_H
 #define JOB_H
 
-#include <stdint.h>
 #include <mpi.h>
+#include <stdint.h>
 
 typedef struct job {
     // A job can only be processed if it's valid.
@@ -15,10 +15,7 @@ typedef struct job {
     uint32_t length;
 } job_t;
 
-void job_init(job_t* job,
-              uint8_t is_valid,
-              uint32_t start,
-              uint32_t len);
+void job_init(job_t* job, uint8_t is_valid, uint32_t start, uint32_t len);
 
 void init_mpi_job_type(MPI_Datatype* type);
 

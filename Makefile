@@ -1,5 +1,4 @@
 TARGET :=	bin/main
-TESTS := bin/tests/main
 
 CC := mpicc
 
@@ -26,9 +25,10 @@ all: $(TARGET)
 clean:
 	$(RM) -r obj bin
 
-.PHONY: test
-test: $(TESTS)
-	mpirun -np $(NP) $<
+.PHONY: autoformat
+autoformat:
+	for i in `find . -name '*.c'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
+	for i in `find . -name '*.h'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
 
 .PHONY: run
 run: $(TARGET)

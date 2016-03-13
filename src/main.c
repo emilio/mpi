@@ -4,17 +4,17 @@
 #define _GNU_SOURCE
 #endif
 
-#include <stdlib.h>
-#include <stdio.h>
-#include <stdbool.h>
-#include <unistd.h>
-#include <crypt.h>
-#include <pthread.h>
-#include "tags.h"
+#include "dispatcher.h"
 #include "job.h"
 #include "reply.h"
-#include "dispatcher.h"
 #include "request.h"
+#include "tags.h"
+#include <crypt.h>
+#include <pthread.h>
+#include <stdbool.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
 
 typedef char crypt_password_t[CRYPT_PASSWORD_LEN + 1];
 
@@ -31,19 +31,21 @@ void process_password(int me, const char* pass) {
         // Send the job request
         request_t request;
         request_init(&request);
-        MPI_Send(&request, 1, REQUEST_DATA_TYPE, 0, REQUEST_TAG, MPI_COMM_WORLD);
+        MPI_Send(&request, 1, REQUEST_DATA_TYPE, 0, REQUEST_TAG,
+                 MPI_COMM_WORLD);
 
         job_t job;
-        MPI_Recv(&job, 1, JOB_DATA_TYPE, 0, JOB_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&job, 1, JOB_DATA_TYPE, 0, JOB_TAG, MPI_COMM_WORLD,
+                 MPI_STATUS_IGNORE);
 
         if (!job.is_valid)
             break; // No more work to do for this password
 
         // printf("Got work to do: %d, %d\n", job.start, job.length);
-        char salt[3] = { 0 };
+        char salt[3] = {0};
         salt[0] = pass[0];
         salt[1] = pass[1];
-        char to_try[9] = { 0 };
+        char to_try[9] = {0};
         bool found = false;
         uint32_t i = 0;
         for (; i < job.length; ++i) {
@@ -61,7 +63,8 @@ void process_password(int me, const char* pass) {
         reply_init(&reply, found, i, to_try);
 
         MPI_Request req;
-        MPI_Isend(&reply, 1, REPLY_DATA_TYPE, 0, REPLY_TAG, MPI_COMM_WORLD, &req);
+        MPI_Isend(&reply, 1, REPLY_DATA_TYPE, 0, REPLY_TAG, MPI_COMM_WORLD,
+                  &req);
         MPI_Request_free(&req);
     }
 }
@@ -95,9 +98,10 @@ int main(int argc, char** argv) {
         // pthread_create(&DISPATCHER_THREAD, NULL, dispatcher_thread, argv);
     } else {
 
-        char password[14] = { 0 };
+        char password[14] = {0};
         while (true) {
-            MPI_Recv(&password, CRYPT_PASSWORD_LEN, MPI_CHAR, 0, PASSWORD_TAG, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+            MPI_Recv(&password, CRYPT_PASSWORD_LEN, MPI_CHAR, 0, PASSWORD_TAG,
+                     MPI_COMM_WORLD, MPI_STATUS_IGNORE);
             if (!*password)
                 break; // Empty string -> it's over
 

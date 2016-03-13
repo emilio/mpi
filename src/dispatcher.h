@@ -4,11 +4,11 @@
 #define CRYPT_PASSWORD_LEN 13
 
 #include <mpi.h>
+#include <stdbool.h>
+#include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
-#include <stdint.h>
 
 extern MPI_Datatype REPLY_DATA_TYPE;
 extern MPI_Datatype JOB_DATA_TYPE;
