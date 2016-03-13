@@ -4,13 +4,13 @@ TESTS := bin/tests/main
 CC := mpicc
 
 # crypt("10", "aa");
-TEST_PASSWORDS := aal9/sIHZQyhA
+# TEST_PASSWORDS := aal9/sIHZQyhA
+TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 # aahpg4OwfHMXY aaTwdzPnfU7XE aaxF36GTHquV
 
 COMMON_FLAGS := -Wall -pedantic -g
 
 CFLAGS := $(COMMON_FLAGS) -std=c99 -pedantic
-CXXFLAGS := $(COMMON_FLAGS) -std=c++14
-CXXLINKFLAGS := -lcrypt
+CLINKFLAGS := -lcrypt
 
 NP ?= 4
 

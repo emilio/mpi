@@ -7,6 +7,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
+#include <stdint.h>
+
+extern MPI_Datatype REPLY_DATA_TYPE;
+extern MPI_Datatype JOB_DATA_TYPE;
+extern MPI_Datatype REQUEST_DATA_TYPE;
 
 void* dispatcher_thread(void* arg);
 
