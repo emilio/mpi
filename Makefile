@@ -30,6 +30,10 @@ autoformat:
 	for i in `find . -name '*.c'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
 	for i in `find . -name '*.h'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
 
+.PHONY: release
+release: CFLAGS := $(CFLAGS) -O3
+release: clean all
+
 .PHONY: run
 run: $(TARGET)
 	mpirun --mca btl tcp,self -np $(NP) $(TARGET) $(TEST_PASSWORDS)
