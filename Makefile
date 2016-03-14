@@ -14,8 +14,8 @@ CLINKFLAGS := -lcrypt
 NP ?= 4
 
 OBJECTS := $(patsubst src/%, obj/%, \
-					   $(patsubst %.c, %.o, $(wildcard src/*.c)) \
-						 $(patsubst %.cpp, %.o, $(wildcard src/*.cpp)))
+           $(patsubst %.c, %.o, $(wildcard src/*.c)) \
+           $(patsubst %.cpp, %.o, $(wildcard src/*.cpp)))
 
 .PHONY: all
 all: $(TARGET)
