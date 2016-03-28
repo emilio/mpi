@@ -8,6 +8,10 @@
 #include <stdlib.h>
 #include <string.h>
 
+#ifndef JOB_SIZE
+#define JOB_SIZE 5000
+#endif
+
 extern MPI_Datatype REPLY_DATA_TYPE;
 extern MPI_Datatype JOB_DATA_TYPE;
 extern MPI_Datatype REQUEST_DATA_TYPE;

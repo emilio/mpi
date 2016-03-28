@@ -1,4 +1,5 @@
 #include "dispatcher.h"
+#include "csv.h"
 #include "epoch_info.h"
 #include "job.h"
 #include "log.h"
@@ -6,27 +7,30 @@
 #include "request.h"
 #include "tags.h"
 #include <assert.h>
-
-#ifndef JOB_SIZE
-#define JOB_SIZE 5000
-#endif
+#include <errno.h>
+#include <stdio.h>
+#include <string.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #ifdef ASYNC_ROUND
 #define ASSERT_IF_SYNC(cond, msg)
+#define MODE_STRING "async"
 #else
 #define ASSERT_IF_SYNC(cond, msg) assert((cond) && msg)
+#define MODE_STRING "sync"
 #endif
 
 #define CRASH_IF_SYNC(msg) ASSERT_IF_SYNC(false, msg)
 
 void dispatch_job_requests(int workers, const char* password,
                            uint32_t current_epoch, double* total_time,
-                           size_t* total_iterations, bool* finish_status) {
+                           size_t* total_iterations, bool* finish_status,
+                           FILE* csv_output) {
     assert(total_time);
     assert(total_iterations);
 
+    // TODO: We could reuse this allocation in fact, but...
     uint32_t* job_done_so_far = calloc(sizeof(uint32_t), workers);
 
     uint32_t sent_works_until = 0;
@@ -128,38 +132,55 @@ void dispatch_job_requests(int workers, const char* password,
 
     if (found_by == -1) {
         printf("  No process was able to find the password\n");
-        free(job_done_so_far);
-        return;
+        csv_write_row(csv_output, workers, password, "<not found>", time_delta,
+                      job_done_so_far);
+    } else {
+        printf("  Process %d found the password: %s -> %s\n", found_by,
+               password, successful_reply.decrypted);
+        csv_write_row(csv_output, workers, password, successful_reply.decrypted,
+                      time_delta, job_done_so_far);
     }
-
-    printf("  Process %d found the password: %s -> %s\n", found_by, password,
-           successful_reply.decrypted);
 
     free(job_done_so_far);
 }
 
 void* dispatcher_thread(void* arg) {
-    char** passwords = (char**)arg;
+    const char** passwords = (const char**)arg;
     int process_count;
 
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
+
+    int workers = process_count - 1;
     double total_time = 0.0;
     size_t total_iterations = 0;
     uint32_t current_epoch = 0;
     bool* finish_status = malloc(sizeof(bool) * process_count);
+    FILE* csv_output = NULL;
 
-    while (passwords) {
-        char* current = *passwords;
-        if (!current)
-            break;
+    // 1024 is more than enough for mode-workers-passwords-hash
+    char csv_name[1024] = {0};
+    csv_construct_name(MODE_STRING, workers, passwords, csv_name,
+                       sizeof(csv_name));
+
+    printf("Dispatcher started, trying to save data to: %s\n", csv_name);
+
+    csv_output = fopen(csv_name, "w");
+    if (!csv_output)
+        WARN("Couldn't open file: %s (os error %d: %s)\n", csv_name, errno,
+             strerror(errno));
+
+    csv_write_header(csv_output, workers);
+
+    const char* current;
+    while ((current = *passwords++)) {
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
-            LOG("warning: Discarding invalid password %s\n", current);
+            WARN("Discarding invalid password %s\n", current);
             passwords++;
             continue;
         }
 
-        for (int i = 0; i < process_count - 1; ++i) {
+        for (int i = 0; i < workers; ++i) {
             // In synchonous mode all should have been finished, always.
             ASSERT_IF_SYNC(current_epoch == 0 || finish_status[i],
                            "someone didn't finish in synchronous mode");
@@ -169,9 +190,9 @@ void* dispatcher_thread(void* arg) {
         double dispatch_begin = MPI_Wtime();
         epoch_info_t epoch_info;
         epoch_info_init(&epoch_info, current_epoch, current);
-        for (int i = 1; i < process_count; ++i) {
+        for (int i = 0; i < workers; ++i) {
             MPI_Request req;
-            MPI_Isend(&epoch_info, 1, EPOCH_INFO_DATA_TYPE, i, PASSWORD_TAG,
+            MPI_Isend(&epoch_info, 1, EPOCH_INFO_DATA_TYPE, i + 1, PASSWORD_TAG,
                       MPI_COMM_WORLD, &req);
             MPI_Request_free(&req);
         }
@@ -181,11 +202,10 @@ void* dispatcher_thread(void* arg) {
         printf("Dispatched password %s in %g seconds\n", current,
                dispatch_delta);
 
-        dispatch_job_requests(process_count - 1, current, current_epoch,
-                              &total_time, &total_iterations, finish_status);
+        dispatch_job_requests(workers, current, current_epoch, &total_time,
+                              &total_iterations, finish_status, csv_output);
 
         current_epoch++;
-        passwords++;
     }
 
 #ifdef ASYNC_ROUND
@@ -228,6 +248,9 @@ void* dispatcher_thread(void* arg) {
 
     printf("Total: %zu iterations in %g seconds\n", total_iterations,
            total_time);
+
+    if (csv_output)
+        fclose(csv_output);
 
     return NULL;
 }

@@ -8,25 +8,20 @@ MODE ?= sync
 # Job size, 5000 by default
 JOB_SIZE ?= 5000
 
+# normal, debug, or release
+BUILD_TYPE = normal
+
 # crypt("10", "aa"); -> not found
 # TEST_PASSWORDS := aal9/sIHZQyhA
-TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 aahpg4OwfHMXY aaTwdzPnfU7XE aaxF36GTHquV
+TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 aahpg4OwfHMXY aaTwdzPnfU7XE
 
-# TODO: Add a #define or command line argument for writing to csv, so it's
-# easier to get stats and make that kind of fancy graphics that teachers like.
-#
-# A command line argument could be useful to avoid recompiling when changing it
-# (or the job size).
-#
-# On the other hand, since we use argv for the passwords, and we should
-# recompile to test with different round modes anyways... It might be easier to
-# just throw it into a #define directive.
+MODE_FLAGS =
 ifneq ($(MODE), sync)
-	MODE_FLAGS := -DASYNC_ROUND
+	MODE_FLAGS += -DASYNC_ROUND
 endif
 
-CFLAGS := $(MODE_FLAGS) -DJOB_SIZE=$(JOB_SIZE) -Wall -pedantic -g -std=c99 -pedantic
-CLINKFLAGS := -lcrypt
+CFLAGS = $(MODE_FLAGS) -DJOB_SIZE=$(JOB_SIZE) -DBUILD_TYPE=$(BUILD_TYPE) -Wall -pedantic -std=c99 -pedantic
+CLINKFLAGS = -lcrypt
 
 NP ?= 4
 
@@ -48,8 +43,14 @@ autoformat:
 	for i in `find . -name '*.h'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
 
 .PHONY: release
-release: CFLAGS := $(CFLAGS) -O3
+release: BUILD_TYPE = release
+release: CFLAGS += -O3
 release: clean all
+
+.PHONY: debug
+debug: CFLAGS += -O0 -g
+debug: BUILD_TYPE = debug
+debug: clean all
 
 .PHONY: run
 run: $(TARGET)
