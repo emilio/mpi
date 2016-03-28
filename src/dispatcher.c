@@ -7,7 +7,19 @@
 #include "log.h"
 #include <assert.h>
 
+#ifndef JOB_SIZE
+#define JOB_SIZE 5000
+#endif
+
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
+
+#ifdef ASYNC_ROUND
+#  define ASSERT_IF_SYNC(cond, msg)
+#else
+#  define ASSERT_IF_SYNC(cond, msg) assert((cond) && msg)
+#endif
+
+#define CRASH_IF_SYNC(msg) ASSERT_IF_SYNC(false, msg)
 
 void dispatch_job_requests(int workers,
                            const char* password,
@@ -17,8 +29,6 @@ void dispatch_job_requests(int workers,
                            bool*  finish_status) {
     assert(total_time);
     assert(total_iterations);
-
-    const uint32_t WORK_SIZE = 5000;
 
     uint32_t* job_done_so_far = calloc(sizeof(uint32_t), workers);
 
@@ -35,10 +45,12 @@ void dispatch_job_requests(int workers,
 
     double time_start = MPI_Wtime();
 
-#ifndef ASYNC_ROUND
-    while (invalid_jobs_sent != workers) {
+#ifdef ASYNC_ROUND
+    // In async mode we can quit quickly if we find the password, but we should
+    // wait if we don't for every possible response
+    while (found_by == -1 && invalid_jobs_sent != workers) {
 #else
-    while (found_by == -1) {
+    while (invalid_jobs_sent != workers) {
 #endif
         MPI_Iprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &completed,
                    MPI_STATUS_IGNORE);
@@ -48,23 +60,22 @@ void dispatch_job_requests(int workers,
 
             if (request.epoch != current_epoch) {
                 LOG("request epoch mismatch: %u != %u\n", request.epoch, current_epoch);
-#ifndef ASYNC_ROUND
-                assert(false && "this should never happen in synchronous mode\n");
-#endif
+                CRASH_IF_SYNC("request epoch mismatch in sync round model");
             }
 
             job_t job;
             job.epoch = request.epoch;
-            if (request.epoch == current_epoch && found_by == -1 && sent_works_until < MAX_PASSWORD) {
+            if (request.epoch == current_epoch && found_by == -1 && sent_works_until < MAX_PASSWORD + 1) {
                 job.is_valid = 1;
                 job.start = sent_works_until;
-                job.length = MIN(WORK_SIZE, MAX_PASSWORD - sent_works_until);
+                job.length = MIN(JOB_SIZE, MAX_PASSWORD + 1 - sent_works_until);
                 sent_works_until += job.length;
             } else {
                 // Mark this one as finished
-                if (request.epoch == current_epoch)
+                if (request.epoch == current_epoch) {
                     finish_status[status.MPI_SOURCE - 1] = true;
-                invalid_jobs_sent++;
+                    invalid_jobs_sent++;
+                }
                 job.is_valid = 0;
             }
 
@@ -84,6 +95,7 @@ void dispatch_job_requests(int workers,
 
             if (reply.epoch != current_epoch) {
                 LOG("reply epoch mismatch: %u != %u\n", reply.epoch, current_epoch);
+                CRASH_IF_SYNC("reply epoch mismatch in sync mode");
                 continue;
             }
 
@@ -105,6 +117,14 @@ void dispatch_job_requests(int workers,
     assert(time_delta > 0);
     *total_time += time_delta;
 
+    size_t iterations = 0;
+    for (int i = 0; i < workers; ++i) {
+        iterations += job_done_so_far[i];
+        printf("   * Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
+    }
+    printf("  Total(%s): %zu iterations in %g seconds\n", password, iterations, time_delta);
+    *total_iterations += iterations;
+
     if (found_by == -1) {
         printf("  No process was able to find the password\n");
         free(job_done_so_far);
@@ -113,14 +133,6 @@ void dispatch_job_requests(int workers,
 
     printf("  Process %d found the password: %s -> %s\n", found_by, password,
            successful_reply.decrypted);
-
-    size_t iterations = 0;
-    for (int i = 0; i < workers; ++i) {
-        iterations += job_done_so_far[i];
-        printf("   * Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
-    }
-    printf("  Total(%s): %zu iterations in %g seconds\n", password, iterations, time_delta);
-    *total_iterations += iterations;
 
     free(job_done_so_far);
 }
@@ -147,10 +159,8 @@ void* dispatcher_thread(void* arg) {
         }
 
         for (int i = 0; i < process_count - 1; ++i) {
-#ifndef ASYNC_ROUND
             // In synchonous mode all should have been finished, always.
-            assert(current_epoch == 0 || finish_status[i]);
-#endif
+            ASSERT_IF_SYNC(current_epoch == 0 || finish_status[i], "someone didn't finish in synchronous mode");
             finish_status[i] = false;
         }
 
@@ -198,6 +208,8 @@ void* dispatcher_thread(void* arg) {
         }
     }
 #endif
+
+    free(finish_status);
 
     // We send an empty string to indicate the end
     char over = '\0';

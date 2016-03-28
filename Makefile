@@ -2,13 +2,18 @@ TARGET :=	bin/main
 
 CC := mpicc
 
+# Either "sync" or "async"
+MODE ?= sync
+
 # crypt("10", "aa");
 # TEST_PASSWORDS := aal9/sIHZQyhA
-TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 # aahpg4OwfHMXY aaTwdzPnfU7XE aaxF36GTHquV
+TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 aahpg4OwfHMXY aaTwdzPnfU7XE aaxF36GTHquV
 
-COMMON_FLAGS := -Wall -pedantic -g
+ifneq ($(MODE), sync)
+	MODE_FLAGS := -DASYNC_ROUND
+endif
 
-CFLAGS := $(COMMON_FLAGS) -std=c99 -pedantic
+CFLAGS := $(MODE_FLAGS) -Wall -pedantic -g -std=c99 -pedantic
 CLINKFLAGS := -lcrypt
 
 NP ?= 4
