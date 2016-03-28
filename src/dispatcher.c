@@ -1,10 +1,10 @@
 #include "dispatcher.h"
+#include "epoch_info.h"
 #include "job.h"
+#include "log.h"
 #include "reply.h"
 #include "request.h"
 #include "tags.h"
-#include "epoch_info.h"
-#include "log.h"
 #include <assert.h>
 
 #ifndef JOB_SIZE
@@ -14,19 +14,16 @@
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
 #ifdef ASYNC_ROUND
-#  define ASSERT_IF_SYNC(cond, msg)
+#define ASSERT_IF_SYNC(cond, msg)
 #else
-#  define ASSERT_IF_SYNC(cond, msg) assert((cond) && msg)
+#define ASSERT_IF_SYNC(cond, msg) assert((cond) && msg)
 #endif
 
 #define CRASH_IF_SYNC(msg) ASSERT_IF_SYNC(false, msg)
 
-void dispatch_job_requests(int workers,
-                           const char* password,
-                           uint32_t current_epoch,
-                           double* total_time,
-                           size_t* total_iterations,
-                           bool*  finish_status) {
+void dispatch_job_requests(int workers, const char* password,
+                           uint32_t current_epoch, double* total_time,
+                           size_t* total_iterations, bool* finish_status) {
     assert(total_time);
     assert(total_iterations);
 
@@ -59,13 +56,15 @@ void dispatch_job_requests(int workers,
                      REQUEST_TAG, MPI_COMM_WORLD, &status);
 
             if (request.epoch != current_epoch) {
-                LOG("request epoch mismatch: %u != %u\n", request.epoch, current_epoch);
+                LOG("request epoch mismatch: %u != %u\n", request.epoch,
+                    current_epoch);
                 CRASH_IF_SYNC("request epoch mismatch in sync round model");
             }
 
             job_t job;
             job.epoch = request.epoch;
-            if (request.epoch == current_epoch && found_by == -1 && sent_works_until < MAX_PASSWORD + 1) {
+            if (request.epoch == current_epoch && found_by == -1 &&
+                sent_works_until < MAX_PASSWORD + 1) {
                 job.is_valid = 1;
                 job.start = sent_works_until;
                 job.length = MIN(JOB_SIZE, MAX_PASSWORD + 1 - sent_works_until);
@@ -94,7 +93,8 @@ void dispatch_job_requests(int workers,
                      MPI_COMM_WORLD, &status);
 
             if (reply.epoch != current_epoch) {
-                LOG("reply epoch mismatch: %u != %u\n", reply.epoch, current_epoch);
+                LOG("reply epoch mismatch: %u != %u\n", reply.epoch,
+                    current_epoch);
                 CRASH_IF_SYNC("reply epoch mismatch in sync mode");
                 continue;
             }
@@ -122,7 +122,8 @@ void dispatch_job_requests(int workers,
         iterations += job_done_so_far[i];
         printf("   * Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
     }
-    printf("  Total(%s): %zu iterations in %g seconds\n", password, iterations, time_delta);
+    printf("  Total(%s): %zu iterations in %g seconds\n", password, iterations,
+           time_delta);
     *total_iterations += iterations;
 
     if (found_by == -1) {
@@ -160,7 +161,8 @@ void* dispatcher_thread(void* arg) {
 
         for (int i = 0; i < process_count - 1; ++i) {
             // In synchonous mode all should have been finished, always.
-            ASSERT_IF_SYNC(current_epoch == 0 || finish_status[i], "someone didn't finish in synchronous mode");
+            ASSERT_IF_SYNC(current_epoch == 0 || finish_status[i],
+                           "someone didn't finish in synchronous mode");
             finish_status[i] = false;
         }
 
@@ -176,9 +178,11 @@ void* dispatcher_thread(void* arg) {
         double dispatch_delta = MPI_Wtime() - dispatch_begin;
         total_time += dispatch_delta;
 
-        printf("Dispatched password %s in %g seconds\n", current, dispatch_delta);
+        printf("Dispatched password %s in %g seconds\n", current,
+               dispatch_delta);
 
-        dispatch_job_requests(process_count - 1, current, current_epoch, &total_time, &total_iterations, finish_status);
+        dispatch_job_requests(process_count - 1, current, current_epoch,
+                              &total_time, &total_iterations, finish_status);
 
         current_epoch++;
         passwords++;
@@ -197,7 +201,7 @@ void* dispatcher_thread(void* arg) {
 
     job_t final_job;
     final_job.is_valid = false;
-    final_job.epoch = (uint32_t) -1;
+    final_job.epoch = (uint32_t)-1;
     for (int i = 0; i < process_count - 1; ++i) {
         if (!finish_status[i]) {
             LOG("Sending end job to %d\n", i + 1);
@@ -222,7 +226,8 @@ void* dispatcher_thread(void* arg) {
         MPI_Request_free(&req);
     }
 
-    printf("Total: %zu iterations in %g seconds\n", total_iterations, total_time);
+    printf("Total: %zu iterations in %g seconds\n", total_iterations,
+           total_time);
 
     return NULL;
 }

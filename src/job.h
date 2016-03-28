@@ -20,7 +20,8 @@ typedef struct job {
     uint32_t epoch;
 } job_t;
 
-void job_init(job_t* job, uint8_t is_valid, uint32_t start, uint32_t len, uint32_t epoch);
+void job_init(job_t* job, uint8_t is_valid, uint32_t start, uint32_t len,
+              uint32_t epoch);
 
 void init_mpi_job_type(MPI_Datatype* type);
 

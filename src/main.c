@@ -5,19 +5,19 @@
 #endif
 
 #include "dispatcher.h"
+#include "epoch_info.h"
 #include "job.h"
+#include "log.h"
 #include "reply.h"
 #include "request.h"
 #include "tags.h"
-#include "epoch_info.h"
-#include "log.h"
+#include <assert.h>
 #include <crypt.h>
 #include <pthread.h>
 #include <stdbool.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
-#include <assert.h>
 
 typedef char crypt_password_t[CRYPT_PASSWORD_LEN + 1];
 typedef char password_answer_t[9];
@@ -32,7 +32,8 @@ pthread_t DISPATCHER_THREAD;
 // This function processes a valid job, using the `answer` buffer as output.
 //
 // Returns the number of iterations done.
-uint32_t process_valid_job(job_t* job, const char* pass, password_answer_t answer, bool* found) {
+uint32_t process_valid_job(job_t* job, const char* pass,
+                           password_answer_t answer, bool* found) {
     assert(job);
     assert(job->is_valid);
     assert(found);
@@ -75,11 +76,11 @@ bool process_password(int me, const char* pass, uint32_t current_epoch) {
         MPI_Recv(&job, 1, JOB_DATA_TYPE, 0, JOB_TAG, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
 
-
         // If the job epoch doesn't match, we should totally stop working, not
         // just go on to the next round
         if (!job.is_valid) {
-            LOG("Process %d received invalid job, epoch: %d, current: %d\n", me, job.epoch, current_epoch);
+            LOG("Process %d received invalid job, epoch: %d, current: %d\n", me,
+                job.epoch, current_epoch);
             return job.epoch == current_epoch;
         }
 
@@ -99,7 +100,6 @@ bool process_password(int me, const char* pass, uint32_t current_epoch) {
         MPI_Request_free(&req);
     }
 }
-
 
 // This is the fallback for when just one process is available
 void sequential_fallback(char** passwords) {
@@ -126,7 +126,8 @@ void sequential_fallback(char** passwords) {
 
         bool found;
         password_answer_t maybe_answer;
-        size_t iterations = process_valid_job(&job, current, maybe_answer, &found);
+        size_t iterations =
+            process_valid_job(&job, current, maybe_answer, &found);
 
         double delta = MPI_Wtime() - begin;
         assert(delta > 0);
@@ -135,17 +136,20 @@ void sequential_fallback(char** passwords) {
         total_iterations += iterations;
 
         if (found) {
-            printf("Process 0 found password %s -> %s\n", current, maybe_answer);
+            printf("Process 0 found password %s -> %s\n", current,
+                   maybe_answer);
         } else {
             printf("Process 0 unable to find password\n");
         }
 
-        printf("  Total(%s): %zu iterations in %g seconds\n", current, iterations, delta);
+        printf("  Total(%s): %zu iterations in %g seconds\n", current,
+               iterations, delta);
 
         passwords++;
     }
 
-    printf("Total: %zu iterations in %g seconds\n", total_iterations, total_time);
+    printf("Total: %zu iterations in %g seconds\n", total_iterations,
+           total_time);
 }
 
 int main(int argc, char** argv) {

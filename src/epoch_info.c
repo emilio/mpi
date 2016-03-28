@@ -12,13 +12,11 @@ void init_mpi_epoch_info_type(MPI_Datatype* type) {
     int lengths[] = {1, CRYPT_PASSWORD_LEN + 1};
 
     MPI_Aint offsets[] = {
-        offsetof(epoch_info_t, epoch),
-        offsetof(epoch_info_t, password),
+        offsetof(epoch_info_t, epoch), offsetof(epoch_info_t, password),
     };
 
     MPI_Datatype types[] = {
-        MPI_UINT32_T,
-        MPI_CHAR,
+        MPI_UINT32_T, MPI_CHAR,
     };
 
     MPI_Type_create_struct(count, lengths, offsets, types, type);
