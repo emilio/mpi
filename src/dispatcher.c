@@ -162,6 +162,11 @@ void* dispatcher_thread(void* arg) {
     csv_construct_name(MODE_STRING, workers, passwords, csv_name,
                        sizeof(csv_name));
 
+    // Mark all as finished because if all the passwords we have are invalid
+    // we'll read uninitialized memory.
+    for (size_t i = 0; i < workers; ++i)
+        finish_status[i] = true;
+
     printf("Dispatcher started, trying to save data to: %s\n", csv_name);
 
     csv_output = fopen(csv_name, "w");
@@ -182,7 +187,7 @@ void* dispatcher_thread(void* arg) {
 
         for (int i = 0; i < workers; ++i) {
             // In synchonous mode all should have been finished, always.
-            ASSERT_IF_SYNC(current_epoch == 0 || finish_status[i],
+            ASSERT_IF_SYNC(finish_status[i],
                            "someone didn't finish in synchronous mode");
             finish_status[i] = false;
         }
