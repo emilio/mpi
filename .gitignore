@@ -1,2 +1,3 @@
 bin/
 obj/
+bench/data/*.csv
