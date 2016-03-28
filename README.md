@@ -7,14 +7,20 @@ Esto implica overhead por comunicación, así que probablemente haya que decidir
 sabiamente el tamaño por defecto de los mensajes.
 
 ## Instrucciones
-> Descargar como .zip
-> Descomprimir
-> ```make```
-> ```cd bin```
-> ```mpirun -np X main HASH HASH ... HASH``` X == numero de procesos  HASH == uno mas de los hash de prueba
-> Hash de prueba 
-  >```aaTrgM6tVLhas``` 
-  >```aagWNRh7V9kN6``` 
-  >```aahpg4OwfHMXY``` 
-  >```aaTwdzPnfU7XE``` 
-  >```aaxF36GTHquV```
+
+1. Descargar como .zip y descomprimir o clonar con `git`.
+
+```
+$ make bench
+```
+
+Acabaréis con un monton de datos en `bench/data/`, podéis usarlo para montar
+estadísticas. El nombre del fichero indica el modo de compilación, de ejecución,
+el número de procesos "trabajadores" y de contraseñas.
+
+### Hashes de prueba
+
+ * `aaTrgM6tVLhas`
+ * `aagWNRh7V9kN6`
+ * `aahpg4OwfHMXY`
+ * `aaTwdzPnfU7XE`

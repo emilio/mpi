@@ -11,6 +11,14 @@
 #define STR_(x) #x
 #define STR(x) STR_(x)
 
+void str_replace_char(char* str, char what, char by) {
+    while (*str) {
+        if (*str == what)
+            *str = by;
+        str++;
+    }
+}
+
 size_t csv_construct_name(const char* mode, int workers, const char** passwords,
                           char* buffer, size_t buffer_size) {
     const char** passwords_iter;
@@ -40,6 +48,10 @@ size_t csv_construct_name(const char* mode, int workers, const char** passwords,
             strncpy(hash, current_hash, sizeof(hash));
         }
     }
+
+    // replaces all ocurrences of '/' by '_' in order to prevent seeming
+    // directory-like
+    str_replace_char(hash, '/', '_');
 
     snprintf(buffer, buffer_size,
              CSV_OUT_PATH "%s-%s-%d-workers-%d-passwords-job-size-%d-%s.csv",

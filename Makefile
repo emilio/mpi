@@ -13,7 +13,7 @@ BUILD_TYPE = normal
 
 # crypt("10", "aa"); -> not found
 # TEST_PASSWORDS := aal9/sIHZQyhA
-TEST_PASSWORDS := aaTrgM6tVLhas aagWNRh7V9kN6 aahpg4OwfHMXY aaTwdzPnfU7XE
+TEST_PASSWORDS ?= aaTrgM6tVLhas aagWNRh7V9kN6 aahpg4OwfHMXY aaTwdzPnfU7XE
 
 MODE_FLAGS =
 ifneq ($(MODE), sync)
@@ -36,6 +36,10 @@ all: $(TARGET)
 .PHONY: clean
 clean:
 	$(RM) -r obj bin
+
+.PHONY: bench-local
+bench-local:
+	@./bench/bench-local
 
 .PHONY: autoformat
 autoformat:

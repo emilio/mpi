@@ -1,0 +1,58 @@
+#!/bin/bash
+
+cd "$(dirname $0)/.."
+
+
+CPU_COUNT=$(grep -c ^processor /proc/cpuinfo)
+BUILD_TYPES="debug all release"
+MODES="sync async"
+TEST_CASES=bench/test-cases.txt
+ME="$(basename $0)"
+
+# Echoes something with the program name in front
+pretty_echo() {
+  echo -e "\e[34m$ME:\e[0m $@"
+}
+
+# Executes a command, saving the output into a temporary file, and shows it if
+# appropiate
+LOG_FILE=$(mktemp)
+checked_command() {
+  pretty_echo "$@"
+  $@ > $LOG_FILE 2>&1
+  if [ $? -ne 0 ]; then
+    pretty_echo "\e[91mcommand failed:\e[0m $@"
+    pretty_echo "\e[91moutput:\e[31m"
+    echo -e "\e[34mdeploy:\e[0m \e[91moutput:\e[31m"
+    cat $LOG_FILE
+    echo -e "\e[0m"
+    rm $LOG_FILE
+    exit 1
+  fi
+}
+
+pretty_echo "found $CPU_COUNT cpus"
+
+# tests all the passwords given to it via arguments in every possible mode,
+# build type and cpu count
+test_case() {
+  pretty_echo "testing passwords: $@"
+  for build_type in $BUILD_TYPES; do
+    for mode in $MODES; do
+      pretty_echo "build_type: $build_type, mode: $mode"
+      checked_command make clean
+      checked_command make MODE=$mode
+      for cpus in $(seq 1 $CPU_COUNT); do
+        pretty_echo "cpus: $cpus"
+        checked_command make run NP=$cpus TEST_PASSWORDS="$@"
+      done
+    done
+  done
+}
+
+while IFS= read -r line; do
+  case "$line" in
+    \#*) ;; # A comment
+    *) test_case $line ;;
+  esac
+done < "$TEST_CASES"
