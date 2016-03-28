@@ -3,10 +3,13 @@
 #include "reply.h"
 #include "request.h"
 #include "tags.h"
+#include <assert.h>
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-void dispatch_job_requests(int workers, const char* password) {
+void dispatch_job_requests(int workers, const char* password, double* total_time) {
+    assert(total_time);
+
     const uint32_t WORK_SIZE = 5000;
     const uint32_t MAX_PASSWORD = 99999999;
 
@@ -22,6 +25,9 @@ void dispatch_job_requests(int workers, const char* password) {
     reply_t reply;
     reply_t successful_reply;
     request_t request;
+
+    double time_start = MPI_Wtime();
+
     while (invalid_jobs_sent != workers) {
         MPI_Iprobe(MPI_ANY_SOURCE, REQUEST_TAG, MPI_COMM_WORLD, &completed,
                    MPI_STATUS_IGNORE);
@@ -62,18 +68,28 @@ void dispatch_job_requests(int workers, const char* password) {
         }
     }
 
+    double time_delta = MPI_Wtime() - time_start;
+
+    // Just in case, but what the heck could
+    // happen for this not to be true?
+    assert(time_delta > 0);
+    *total_time += time_delta;
+
     if (found_by == -1) {
-        printf("No process was able to find the password\n");
+        printf("  No process was able to find the password\n");
         free(job_done_so_far);
         return;
     }
 
-    printf("Process %d found the password: %s -> %s\n", found_by, password,
+    printf("  Process %d found the password: %s -> %s\n", found_by, password,
            successful_reply.decrypted);
+
     for (int i = 0; i < workers; ++i) {
-        printf("Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
+        printf("   * Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
     }
     free(job_done_so_far);
+
+    printf("  Time taken: %g seconds\n", time_delta);
 }
 
 void* dispatcher_thread(void* arg) {
@@ -81,7 +97,7 @@ void* dispatcher_thread(void* arg) {
     int process_count;
 
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
-    printf("Dispatcher started: %s\n", passwords[0]);
+    double total_time = 0.0;
 
     while (passwords) {
         char* current = *passwords;
@@ -89,21 +105,24 @@ void* dispatcher_thread(void* arg) {
             break;
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
-            printf("Discarding invalid password %s\n", current);
+            printf("warning: Discarding invalid password %s\n", current);
             passwords++;
             continue;
         }
 
-        printf("Dispatching password %s\n", current);
+        double dispatch_begin = MPI_Wtime();
         for (int i = 1; i < process_count; ++i) {
             MPI_Request req;
             MPI_Isend(current, CRYPT_PASSWORD_LEN, MPI_CHAR, i, PASSWORD_TAG,
                       MPI_COMM_WORLD, &req);
             MPI_Request_free(&req);
         }
+        double dispatch_delta = MPI_Wtime() - dispatch_begin;
+        total_time += dispatch_delta;
 
-        // Dispatch job requests
-        dispatch_job_requests(process_count - 1, current);
+        printf("Dispatched password %s in %g seconds\n", current, dispatch_delta);
+
+        dispatch_job_requests(process_count - 1, current, &total_time);
 
         passwords++;
     }
@@ -115,6 +134,8 @@ void* dispatcher_thread(void* arg) {
         MPI_Isend(&over, 1, MPI_CHAR, i, PASSWORD_TAG, MPI_COMM_WORLD, &req);
         MPI_Request_free(&req);
     }
+
+    printf("All passwords processed in %g seconds\n", total_time);
 
     return NULL;
 }
