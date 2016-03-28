@@ -36,7 +36,7 @@ release: clean all
 
 .PHONY: run
 run: $(TARGET)
-	mpirun --mca btl tcp,self -np $(NP) $(TARGET) $(TEST_PASSWORDS)
+	mpirun -np $(NP) $(TARGET) $(TEST_PASSWORDS)
 
 obj/%.o: src/%.c src/%.h
 	@mkdir -p $(dir $@)

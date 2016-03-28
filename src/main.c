@@ -9,6 +9,8 @@
 #include "reply.h"
 #include "request.h"
 #include "tags.h"
+#include "epoch_info.h"
+#include "log.h"
 #include <crypt.h>
 #include <pthread.h>
 #include <stdbool.h>
@@ -23,6 +25,7 @@ typedef char password_answer_t[9];
 MPI_Datatype JOB_DATA_TYPE;
 MPI_Datatype REPLY_DATA_TYPE;
 MPI_Datatype REQUEST_DATA_TYPE;
+MPI_Datatype EPOCH_INFO_DATA_TYPE;
 
 pthread_t DISPATCHER_THREAD;
 
@@ -57,11 +60,14 @@ uint32_t process_valid_job(job_t* job, const char* pass, password_answer_t answe
 
 // This function takes care of sending job requests to the parent, and
 // returning once there's no more job to do for the current password.
-void process_password(int me, const char* pass) {
+//
+// It returns false if the process should do no more job.
+bool process_password(int me, const char* pass, uint32_t current_epoch) {
+    bool found = false;
     while (true) {
         // Send the job request
         request_t request;
-        request_init(&request);
+        request_init(&request, current_epoch);
         MPI_Send(&request, 1, REQUEST_DATA_TYPE, 0, REQUEST_TAG,
                  MPI_COMM_WORLD);
 
@@ -69,15 +75,23 @@ void process_password(int me, const char* pass) {
         MPI_Recv(&job, 1, JOB_DATA_TYPE, 0, JOB_TAG, MPI_COMM_WORLD,
                  MPI_STATUS_IGNORE);
 
-        if (!job.is_valid)
-            break; // No more work to do for this password
 
-        bool found;
+        // If the job epoch doesn't match, we should totally stop working, not
+        // just go on to the next round
+        if (!job.is_valid) {
+            LOG("Process %d received invalid job, epoch: %d, current: %d\n", me, job.epoch, current_epoch);
+            return job.epoch == current_epoch;
+        }
+
+        assert(job.epoch == current_epoch);
+
+        LOG("Process %d: %u..%u\n", me, job.start, job.start + job.length);
+
         password_answer_t answer;
         uint32_t iterations = process_valid_job(&job, pass, answer, &found);
 
         reply_t reply;
-        reply_init(&reply, found, iterations, answer);
+        reply_init(&reply, found, iterations, current_epoch, answer);
 
         MPI_Request req;
         MPI_Isend(&reply, 1, REPLY_DATA_TYPE, 0, REPLY_TAG, MPI_COMM_WORLD,
@@ -98,7 +112,7 @@ void sequential_fallback(char** passwords) {
             break;
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
-            printf("warning: Discarding invalid password %s\n", current);
+            LOG("warning: Discarding invalid password %s\n", current);
             passwords++;
             continue;
         }
@@ -108,7 +122,7 @@ void sequential_fallback(char** passwords) {
         job_t job;
         // Create a job for every possible combination of the
         // password
-        job_init(&job, true, 0, MAX_PASSWORD + 1);
+        job_init(&job, true, 0, MAX_PASSWORD + 1, 0);
 
         bool found;
         password_answer_t maybe_answer;
@@ -145,6 +159,7 @@ int main(int argc, char** argv) {
     init_mpi_job_type(&JOB_DATA_TYPE);
     init_mpi_reply_type(&REPLY_DATA_TYPE);
     init_mpi_request_type(&REQUEST_DATA_TYPE);
+    init_mpi_epoch_info_type(&EPOCH_INFO_DATA_TYPE);
 
     // We don't care about the program name
     argv++;
@@ -157,7 +172,7 @@ int main(int argc, char** argv) {
     }
 
     if (process_count == 1) {
-        printf("warning: Just one worker found, using sequential fallback\n");
+        LOG("warning: Just one worker found, using sequential fallback\n");
         sequential_fallback(argv);
         MPI_Finalize();
         exit(0);
@@ -167,25 +182,28 @@ int main(int argc, char** argv) {
     // It's difficult to not fall into data races or interlock.
     if (process_id == 0) {
         dispatcher_thread(argv);
-        // pthread_create(&DISPATCHER_THREAD, NULL, dispatcher_thread, argv);
     } else {
-
-        char password[14] = {0};
+        epoch_info_t info;
+        bool should_continue_doing_work = true;
         while (true) {
-            MPI_Recv(&password, CRYPT_PASSWORD_LEN, MPI_CHAR, 0, PASSWORD_TAG,
+            MPI_Recv(&info, 1, EPOCH_INFO_DATA_TYPE, 0, PASSWORD_TAG,
                      MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-            if (!*password)
+
+            if (!info.password[0])
                 break; // Empty string -> it's over
 
-            // printf("Process %d got password: %s\n", process_id, password);
-            process_password(process_id, password);
+            if (should_continue_doing_work) {
+                // NB: We don't just break here, since the final epoch message
+                // should arrive regardless.
+                should_continue_doing_work =
+                    process_password(process_id, info.password, info.epoch);
+            }
         }
     }
 
-    // if (process_id == 0)
-    //    pthread_join(DISPATCHER_THREAD, NULL);
     if (process_id == 0)
-        printf("Everything is over!\n");
+        LOG("Everything is over!\n");
 
     MPI_Finalize();
+    return 0;
 }

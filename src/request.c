@@ -1,13 +1,14 @@
 #include "request.h"
 
-// Do nothing for now
-void request_init(request_t* request) {}
+void request_init(request_t* request, uint32_t epoch) {
+    request->epoch = epoch;
+}
 
 void init_mpi_request_type(MPI_Datatype* type) {
     int count = 1;
     int lengths[] = {1};
     MPI_Aint offsets[] = {
-        offsetof(request_t, __dummy),
+        offsetof(request_t, epoch),
     };
     MPI_Datatype types[] = {
         MPI_UINT32_T,
