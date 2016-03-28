@@ -4,6 +4,8 @@
 #include <mpi.h>
 #include <stdint.h>
 
+static const uint32_t MAX_PASSWORD = 99999999;
+
 typedef struct job {
     // A job can only be processed if it's valid.
     // An invalid job is returned if there is no more

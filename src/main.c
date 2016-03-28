@@ -15,14 +15,45 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
+#include <assert.h>
 
 typedef char crypt_password_t[CRYPT_PASSWORD_LEN + 1];
+typedef char password_answer_t[9];
 
 MPI_Datatype JOB_DATA_TYPE;
 MPI_Datatype REPLY_DATA_TYPE;
 MPI_Datatype REQUEST_DATA_TYPE;
 
 pthread_t DISPATCHER_THREAD;
+
+// This function processes a valid job, using the `answer` buffer as output.
+//
+// Returns the number of iterations done.
+uint32_t process_valid_job(job_t* job, const char* pass, password_answer_t answer, bool* found) {
+    assert(job);
+    assert(job->is_valid);
+    assert(found);
+
+    char salt[3] = {0};
+    salt[0] = pass[0];
+    salt[1] = pass[1];
+
+    // Ensure it's null-terminated
+    answer[sizeof(password_answer_t) - 1] = 0;
+    *found = false;
+    uint32_t i = 0;
+    for (; i < job->length; ++i) {
+        snprintf(answer, sizeof(password_answer_t), "%08u", job->start);
+        if (strcmp(crypt(answer, salt), pass) == 0) {
+            *found = true;
+            return i;
+        }
+
+        job->start++;
+    }
+
+    return i;
+}
 
 // This function takes care of sending job requests to the parent, and
 // returning once there's no more job to do for the current password.
@@ -41,32 +72,66 @@ void process_password(int me, const char* pass) {
         if (!job.is_valid)
             break; // No more work to do for this password
 
-        // printf("Got work to do: %d, %d\n", job.start, job.length);
-        char salt[3] = {0};
-        salt[0] = pass[0];
-        salt[1] = pass[1];
-        char to_try[9] = {0};
-        bool found = false;
-        uint32_t i = 0;
-        for (; i < job.length; ++i) {
-            snprintf(to_try, sizeof(to_try), "%08u", job.start);
-            if (strcmp(crypt(to_try, salt), pass) == 0) {
-                // printf("Found: %d\n", job.start);
-                found = true;
-                break;
-            }
-
-            job.start++;
-        }
+        bool found;
+        password_answer_t answer;
+        uint32_t iterations = process_valid_job(&job, pass, answer, &found);
 
         reply_t reply;
-        reply_init(&reply, found, i, to_try);
+        reply_init(&reply, found, iterations, answer);
 
         MPI_Request req;
         MPI_Isend(&reply, 1, REPLY_DATA_TYPE, 0, REPLY_TAG, MPI_COMM_WORLD,
                   &req);
         MPI_Request_free(&req);
     }
+}
+
+
+// This is the fallback for when just one process is available
+void sequential_fallback(char** passwords) {
+    double total_time = 0;
+    size_t total_iterations = 0;
+
+    while (passwords) {
+        char* current = *passwords;
+        if (!current)
+            break;
+
+        if (strlen(current) != CRYPT_PASSWORD_LEN) {
+            printf("warning: Discarding invalid password %s\n", current);
+            passwords++;
+            continue;
+        }
+
+        double begin = MPI_Wtime();
+
+        job_t job;
+        // Create a job for every possible combination of the
+        // password
+        job_init(&job, true, 0, MAX_PASSWORD + 1);
+
+        bool found;
+        password_answer_t maybe_answer;
+        size_t iterations = process_valid_job(&job, current, maybe_answer, &found);
+
+        double delta = MPI_Wtime() - begin;
+        assert(delta > 0);
+
+        total_time += delta;
+        total_iterations += iterations;
+
+        if (found) {
+            printf("Process 0 found password %s -> %s\n", current, maybe_answer);
+        } else {
+            printf("Process 0 unable to find password\n");
+        }
+
+        printf("  Total(%s): %zu iterations in %g seconds\n", current, iterations, delta);
+
+        passwords++;
+    }
+
+    printf("Total: %zu iterations in %g seconds\n", total_iterations, total_time);
 }
 
 int main(int argc, char** argv) {
@@ -89,6 +154,13 @@ int main(int argc, char** argv) {
         fprintf(stderr, "At least one argument is required\n");
         MPI_Finalize();
         exit(1);
+    }
+
+    if (process_count == 1) {
+        printf("warning: Just one worker found, using sequential fallback\n");
+        sequential_fallback(argv);
+        MPI_Finalize();
+        exit(0);
     }
 
     // TODO: Make process 0 work too instead of just dispatch new jobs.

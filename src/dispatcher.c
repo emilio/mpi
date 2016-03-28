@@ -7,11 +7,11 @@
 
 #define MIN(a, b) ((a) < (b) ? (a) : (b))
 
-void dispatch_job_requests(int workers, const char* password, double* total_time) {
+void dispatch_job_requests(int workers, const char* password, double* total_time, size_t *total_iterations) {
     assert(total_time);
+    assert(total_iterations);
 
     const uint32_t WORK_SIZE = 5000;
-    const uint32_t MAX_PASSWORD = 99999999;
 
     uint32_t* job_done_so_far = calloc(sizeof(uint32_t), workers);
 
@@ -84,12 +84,15 @@ void dispatch_job_requests(int workers, const char* password, double* total_time
     printf("  Process %d found the password: %s -> %s\n", found_by, password,
            successful_reply.decrypted);
 
+    size_t iterations = 0;
     for (int i = 0; i < workers; ++i) {
+        iterations += job_done_so_far[i];
         printf("   * Proccess %d tried: %d\n", i + 1, job_done_so_far[i]);
     }
-    free(job_done_so_far);
+    printf("  Total(%s): %zu iterations in %g seconds\n", password, iterations, time_delta);
+    *total_iterations += iterations;
 
-    printf("  Time taken: %g seconds\n", time_delta);
+    free(job_done_so_far);
 }
 
 void* dispatcher_thread(void* arg) {
@@ -98,6 +101,7 @@ void* dispatcher_thread(void* arg) {
 
     MPI_Comm_size(MPI_COMM_WORLD, &process_count);
     double total_time = 0.0;
+    size_t total_iterations = 0;
 
     while (passwords) {
         char* current = *passwords;
@@ -122,7 +126,7 @@ void* dispatcher_thread(void* arg) {
 
         printf("Dispatched password %s in %g seconds\n", current, dispatch_delta);
 
-        dispatch_job_requests(process_count - 1, current, &total_time);
+        dispatch_job_requests(process_count - 1, current, &total_time, &total_iterations);
 
         passwords++;
     }
@@ -135,7 +139,7 @@ void* dispatcher_thread(void* arg) {
         MPI_Request_free(&req);
     }
 
-    printf("All passwords processed in %g seconds\n", total_time);
+    printf("Total: %zu iterations in %g seconds\n", total_iterations, total_time);
 
     return NULL;
 }
