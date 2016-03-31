@@ -154,7 +154,7 @@ void* dispatcher_thread(void* arg) {
     double total_time = 0.0;
     size_t total_iterations = 0;
     uint32_t current_epoch = 0;
-    bool* finish_status = malloc(sizeof(bool) * process_count);
+    bool* finish_status = malloc(sizeof(bool) * workers);
     FILE* csv_output = NULL;
 
     // 1024 is more than enough for mode-workers-passwords-hash
@@ -179,6 +179,7 @@ void* dispatcher_thread(void* arg) {
 
     const char* current;
     while ((current = *passwords++)) {
+	LOG("Testing password: %s", current);
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
             WARN("Discarding invalid password %s\n", current);
@@ -227,7 +228,7 @@ void* dispatcher_thread(void* arg) {
     job_t final_job;
     final_job.is_valid = false;
     final_job.epoch = (uint32_t)-1;
-    for (int i = 0; i < process_count - 1; ++i) {
+    for (int i = 0; i < workers; ++i) {
         if (!finish_status[i]) {
             LOG("Sending end job to %d\n", i + 1);
             MPI_Request req;
@@ -244,11 +245,9 @@ void* dispatcher_thread(void* arg) {
     char over = '\0';
     epoch_info_t epoch_info;
     epoch_info_init(&epoch_info, current_epoch + 1, &over);
-    for (int i = 1; i < process_count; ++i) {
-        MPI_Request req;
-        MPI_Isend(&epoch_info, 1, EPOCH_INFO_DATA_TYPE, i, PASSWORD_TAG,
-                  MPI_COMM_WORLD, &req);
-        MPI_Request_free(&req);
+    for (int i = 0; i < workers; ++i) {
+        MPI_Send(&epoch_info, 1, EPOCH_INFO_DATA_TYPE, i + 1, PASSWORD_TAG,
+                 MPI_COMM_WORLD);
     }
 
     printf("Total: %zu iterations in %g seconds\n", total_iterations,

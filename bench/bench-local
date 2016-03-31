@@ -46,6 +46,7 @@ test_case() {
       pretty_echo "build_type: $build_type, mode: $mode"
       checked_command make clean
       checked_command make MODE=$mode $build_type
+      checked_command ./bench/add-ssh
       pretty_echo "cpus: $CPU_COUNT"
       checked_command mpirun -wd $(pwd) -np $CPU_COUNT --hostfile bench/.hosts_file bin/main "$@"
     done

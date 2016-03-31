@@ -52,7 +52,7 @@ release: CFLAGS += -O3
 release: clean all
 
 .PHONY: debug
-debug: CFLAGS += -O0 -g
+debug: CFLAGS += -O0 -g -DDEBUG
 debug: BUILD_TYPE = debug
 debug: clean all
 
