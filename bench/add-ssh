@@ -3,5 +3,10 @@
 cd "$(dirname $0)"
 
 while read -r host; do
-  echo "mkdir -p .ssh && echo $(cat $HOME/.ssh/id_rsa.pub) > .ssh/allowed_keys" | ssh "$host"
+  if [ $host == localhost ]; then
+    continue;
+  fi
+  echo "mkdir -p .ssh && echo $(cat $HOME/.ssh/id_rsa.pub) > .ssh/authorized_keys" | ssh "$host"
+  echo "mkdir -p $(pwd)/../bin" | ssh "$host"
+  scp "../bin/main" $host:$(pwd)/../bin/main
 done < .hosts_file

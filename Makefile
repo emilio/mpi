@@ -39,7 +39,7 @@ clean:
 
 .PHONY: bench-local
 bench-local:
-	@./bench/bench-local
+	@./bench/bench-local $(NP)
 
 .PHONY: autoformat
 autoformat:

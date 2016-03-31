@@ -2,7 +2,12 @@
 
 cd "$(dirname $0)/.."
 
-CPU_COUNT=$(grep -c ^processor /proc/cpuinfo)
+CPU_COUNT=8
+
+if [ "x$1" != "x" ]; then
+  CPU_COUNT="$1"
+fi
+
 BUILD_TYPES="debug all release"
 MODES="sync async"
 TEST_CASES=bench/test-cases.txt
@@ -40,11 +45,9 @@ test_case() {
     for mode in $MODES; do
       pretty_echo "build_type: $build_type, mode: $mode"
       checked_command make clean
-      checked_command make MODE=$mode
-      for cpus in $(seq 1 $CPU_COUNT); do
-        pretty_echo "cpus: $cpus"
-        checked_command mpirun -np $cpus --hostfile bench/.hosts_file bin/main "$@"
-      done
+      checked_command make MODE=$mode $build_type
+      pretty_echo "cpus: $CPU_COUNT"
+      checked_command mpirun -wd $(pwd) -np $CPU_COUNT --hostfile bench/.hosts_file bin/main "$@"
     done
   done
 }
