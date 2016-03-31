@@ -182,7 +182,6 @@ void* dispatcher_thread(void* arg) {
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
             WARN("Discarding invalid password %s\n", current);
-            passwords++;
             continue;
         }
 

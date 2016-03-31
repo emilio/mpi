@@ -2,7 +2,6 @@
 
 cd "$(dirname $0)/.."
 
-
 CPU_COUNT=$(grep -c ^processor /proc/cpuinfo)
 BUILD_TYPES="debug all release"
 MODES="sync async"
@@ -50,7 +49,7 @@ test_case() {
   done
 }
 
-while IFS= read -r line; do
+while read -r line; do
   case "$line" in
     \#*) ;; # A comment
     *) test_case $line ;;

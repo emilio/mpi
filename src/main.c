@@ -107,14 +107,13 @@ void sequential_fallback(char** passwords) {
     double total_time = 0;
     size_t total_iterations = 0;
 
-    while (passwords) {
-        char* current = *passwords;
+    const char* current;
+    while ((current = *passwords++)) {
         if (!current)
             break;
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
             LOG("warning: Discarding invalid password %s\n", current);
-            passwords++;
             continue;
         }
 
