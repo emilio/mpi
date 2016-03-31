@@ -65,12 +65,14 @@ uint32_t process_valid_job(job_t* job, const char* pass,
 // It returns false if the process should do no more job.
 bool process_password(int me, const char* pass, uint32_t current_epoch) {
     bool found = false;
+    MPI_Request req;
     while (true) {
         // Send the job request
         request_t request;
         request_init(&request, current_epoch);
-        MPI_Send(&request, 1, REQUEST_DATA_TYPE, 0, REQUEST_TAG,
-                 MPI_COMM_WORLD);
+        MPI_Isend(&request, 1, REQUEST_DATA_TYPE, 0, REQUEST_TAG,
+                  MPI_COMM_WORLD, &req);
+        MPI_Request_free(&req);
 
         job_t job;
         MPI_Recv(&job, 1, JOB_DATA_TYPE, 0, JOB_TAG, MPI_COMM_WORLD,
@@ -94,7 +96,6 @@ bool process_password(int me, const char* pass, uint32_t current_epoch) {
         reply_t reply;
         reply_init(&reply, found, iterations, current_epoch, answer);
 
-        MPI_Request req;
         MPI_Isend(&reply, 1, REPLY_DATA_TYPE, 0, REPLY_TAG, MPI_COMM_WORLD,
                   &req);
         MPI_Request_free(&req);
