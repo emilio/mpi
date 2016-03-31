@@ -1,7 +1,7 @@
 #ifndef DISPATCHER_H
 #define DISPATCHER_H
 
-#include <mpi.h>
+#include "mpi.h"
 #include <stdbool.h>
 #include <stdint.h>
 #include <stdio.h>

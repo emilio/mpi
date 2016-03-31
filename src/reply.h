@@ -1,7 +1,7 @@
 #ifndef REPLY_H_
 #define REPLY_H_
 
-#include <mpi.h>
+#include "mpi.h"
 #include <stdint.h>
 #include <string.h>
 

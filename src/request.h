@@ -1,7 +1,7 @@
 #ifndef REQUEST_H_
 #define REQUEST_H_
 
-#include <mpi.h>
+#include "mpi.h"
 #include <stdint.h>
 
 // A request, at least for now, is just a dummy object.

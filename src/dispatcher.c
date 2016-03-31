@@ -168,6 +168,7 @@ void* dispatcher_thread(void* arg) {
         finish_status[i] = true;
 
     printf("Dispatcher started, trying to save data to: %s\n", csv_name);
+    printf("MPI version: %d.%d\n", MPI_VERSION, MPI_SUBVERSION);
 
     csv_output = fopen(csv_name, "w");
     if (!csv_output)

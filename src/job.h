@@ -1,7 +1,7 @@
 #ifndef JOB_H
 #define JOB_H
 
-#include <mpi.h>
+#include "mpi.h"
 #include <stdint.h>
 
 static const uint32_t MAX_PASSWORD = 99999999;

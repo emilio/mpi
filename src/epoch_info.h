@@ -1,7 +1,7 @@
 #ifndef EPOCH_INFO_H_
 #define EPOCH_INFO_H_
 
-#include <mpi.h>
+#include "mpi.h"
 #include <stdint.h>
 #define CRYPT_PASSWORD_LEN 13
 

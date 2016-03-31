@@ -1,4 +1,4 @@
-#include <mpi.h>
+#include "mpi.h"
 
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
