@@ -1,0 +1,7 @@
+#!/bin/bash
+
+cd "$(dirname $0)"
+
+while read -r host; do
+  echo "mkdir -p .ssh && echo $(cat $HOME/.ssh/id_rsa.pub) > .ssh/allowed_keys" | ssh "$host"
+done < .hosts_file
