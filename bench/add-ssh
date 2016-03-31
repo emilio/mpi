@@ -6,7 +6,6 @@ while read -r host; do
   if [ $host == localhost ]; then
     continue;
   fi
-  echo "mkdir -p .ssh && echo $(cat $HOME/.ssh/id_rsa.pub) > .ssh/authorized_keys" | ssh "$host"
-  echo "mkdir -p $(pwd)/../bin" | ssh "$host"
+  echo "mkdir -p .ssh && echo $(cat $HOME/.ssh/id_rsa.pub) > .ssh/authorized_keys && mkdir -p $(pwd)/../bin" | ssh "$host"
   scp "../bin/main" $host:$(pwd)/../bin/main
 done < .hosts_file
