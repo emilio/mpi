@@ -43,15 +43,23 @@ test_case() {
       checked_command make MODE=$mode
       for cpus in $(seq 1 $CPU_COUNT); do
         pretty_echo "cpus: $cpus"
-        checked_command make run NP=$cpus TEST_PASSWORDS="$@"
+        checked_command mpirun -np $cpus --hostfile bench/.hosts_file bin/main "$@"
       done
     done
   done
 }
 
+TEST_CASES_ARRAY=()
+
 while read -r line; do
+  echo $line
   case "$line" in
     \#*) ;; # A comment
-    *) test_case $line ;;
+    *) TEST_CASES_ARRAY+=("$line");;
   esac
 done < "$TEST_CASES"
+
+for line in "${TEST_CASES_ARRAY[@]}"; do
+  pretty_echo $line
+  test_case "$line"
+done
