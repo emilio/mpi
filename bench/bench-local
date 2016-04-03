@@ -32,7 +32,6 @@ checked_command() {
   if [ $? -ne 0 ]; then
     pretty_echo "\e[91mcommand failed:\e[0m $@"
     pretty_echo "\e[91moutput:\e[31m"
-    echo -e "\e[34mdeploy:\e[0m \e[91moutput:\e[31m"
     cat $LOG_FILE
     echo -e "\e[0m"
     rm $LOG_FILE
