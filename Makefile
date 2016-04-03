@@ -41,6 +41,10 @@ clean:
 bench-local:
 	@./bench/bench-local $(NP) $(JOB_SIZE)
 
+.PHONY: regen-graphs
+regen-graphs:
+	@python bench/gen-graphics.py
+
 .PHONY: autoformat
 autoformat:
 	for i in `find . -name '*.c'`; do echo "$$i"; clang-format "$$i" > "$$i.formatted"; mv "$$i.formatted" "$$i"; done
@@ -55,6 +59,10 @@ release: clean all
 debug: CFLAGS += -O0 -g -DDEBUG
 debug: BUILD_TYPE = debug
 debug: clean all
+
+.PHONY: docs
+docs:
+	$(MAKE) -C docs
 
 .PHONY: run
 run: $(TARGET)
