@@ -179,7 +179,7 @@ void* dispatcher_thread(void* arg) {
 
     const char* current;
     while ((current = *passwords++)) {
-	LOG("Testing password: %s", current);
+        LOG("Testing password: %s", current);
 
         if (strlen(current) != CRYPT_PASSWORD_LEN) {
             WARN("Discarding invalid password %s\n", current);
@@ -245,6 +245,8 @@ void* dispatcher_thread(void* arg) {
     char over = '\0';
     epoch_info_t epoch_info;
     epoch_info_init(&epoch_info, current_epoch + 1, &over);
+    // NOTE: This Send *must* be synchronous, else we don't know if the others
+    // have received it, and MPI could drop the message if they haven't
     for (int i = 0; i < workers; ++i) {
         MPI_Send(&epoch_info, 1, EPOCH_INFO_DATA_TYPE, i + 1, PASSWORD_TAG,
                  MPI_COMM_WORLD);
