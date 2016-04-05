@@ -19,7 +19,8 @@ clean:
 	@pandoc $< --toc -f markdown -t beamer --latex-engine=xelatex -o $@ \
 					-V theme=Malmoe                                             \
 					-V colortheme=seahorse                                      \
-					-V fonttheme=structuresmallcapsserif
+					-V fonttheme=structuresmallcapsserif                        \
+					-V fontsize=8pt
 
 %.html: %.md
 	@$(info [DOC] $< -> $@)
