@@ -148,29 +148,42 @@ def gen_graphs_by_password(directory, cases_by_password):
 
 def gen_graph_for_case(out_file, case):
   fig = plt.figure()
-  points = []
+  lines = []
+  passwords = []
 
   cases = 0
   for workers, metadata in case.items():
     cases += 1
     total_time = 0
     assert workers == metadata['workers']
+    i = 0
     for round_info in metadata['rounds']:
+      if len(lines) == i:
+        lines.append([])
+        passwords.append(round_info['password'])
+
+      lines[i].append((int(workers), round_info['time']))
       total_time += round_info['time']
+      i += 1
 
-    points.append((int(workers), total_time))
+    if len(lines) > 1:
+      if len(lines) == i:
+        lines.append([])
+        passwords.append('Total')
 
-  # Sort by x
-  points.sort(key=lambda p: p[0])
-  print(points)
+      lines[i].append((int(workers), total_time))
 
-  x = list(map(lambda p: p[0], points))
-  y = list(map(lambda p: p[1], points))
+  for i, points in enumerate(lines):
+    # Sort by x
+    points.sort(key=lambda p: p[0])
+    x = list(map(lambda p: p[0], points))
+    y = list(map(lambda p: p[1], points))
+    plt.plot(x, y, marker='o', label=passwords[i])
 
   plt.xlabel('Number of workers')
   plt.ylabel('Computation time')
-  plt.plot(x, y, marker='o')
   plt.ylim(ymin=0)
+  plt.legend()
   plt.savefig(out_file)
 
   plt.close()
