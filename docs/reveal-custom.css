@@ -38,3 +38,22 @@
 .reveal figure {
   text-align: center;
 }
+
+.reveal figure:last-child {
+  float: none;
+  margin: 0;
+  width: 100%;
+}
+
+.reveal figure,
+.reveal figure + figure,
+.reveal figure + figure:last-child {
+  box-sizing: border-box;
+  width: 48%;
+  float: left;
+}
+
+.reveal figure + figure,
+.reveal figure + figure:last-child {
+  margin-left: 2%;
+}

@@ -258,9 +258,53 @@ generarlas.
 
 ---
 
-# Conclusión
+# Datos
 
-% TODO
+A continuación mostraremos gráficas en las podremos comparar tiempos de
+ejecución, dependiendo del número de procesos, del tamaño de trabajo y del modo
+de ejecución y compilación.
+
+---
+
+![Modo asíncrono,
+1 contraseña, 15000](../bench/by-password/release-async-job-size-15000-aal9_sIHZQyhA.svg)
+
+
+![Modo asíncrono,
+1 contraseña, 5000](../bench/by-password/release-async-job-size-5000-aal9_sIHZQyhA.svg)
+
+---
+
+![Modo síncrono,
+1 contraseña, 15000](../bench/by-password/release-sync-job-size-15000-aal9_sIHZQyhA.svg)
+
+
+![Modo síncrono,
+1 contraseña, 5000](../bench/by-password/release-sync-job-size-5000-aal9_sIHZQyhA.svg)
+
+---
+
+![Modo asíncrono, 4 contraseñas,
+15000](../bench/by-password/release-async-job-size-15000-aaTrgM6tVLhasaagWNRh7V9kN6aahpg4OwfHMXYaaTwdzPnfU7XE.svg)
+
+![Modo asíncrono, 4 contraseñas,
+5000](../bench/by-password/release-async-job-size-5000-aaTrgM6tVLhasaagWNRh7V9kN6aahpg4OwfHMXYaaTwdzPnfU7XE.svg)
+
+---
+
+![Modo síncrono, 4 contraseñas,
+15000](../bench/by-password/release-sync-job-size-15000-aaTrgM6tVLhasaagWNRh7V9kN6aahpg4OwfHMXYaaTwdzPnfU7XE.svg)
+
+![Modo síncrono, 4 contraseñas,
+5000](../bench/by-password/release-sync-job-size-5000-aaTrgM6tVLhasaagWNRh7V9kN6aahpg4OwfHMXYaaTwdzPnfU7XE.svg)
+
+---
+
+![Modo asíncrono, 127 workers, 4 contraseñas,
+5000](../bench/127-workers/release-async-127-workers-4-passwords-job-size-15000-74.HC7QMV0cr..csv.svg)
+
+![Modo síncrono, 127 workers, 4 contraseñas,
+5000](../bench/127-workers/release-sync-127-workers-4-passwords-job-size-15000-74.HC7QMV0cr..csv.svg)
 
 ---
 

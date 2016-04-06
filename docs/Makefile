@@ -11,7 +11,8 @@ clean:
 %.pdf: %.md
 	@$(info [DOC] $< -> $@)
 	@pandoc $< --toc -f markdown -t latex --latex-engine=xelatex -o $@ \
-					--filter ./latex-filter.py
+					--filter ./latex-filter.py                                 \
+					--filter ./svg-images.py
 
 
 %-beamer.pdf: %.md
@@ -20,9 +21,11 @@ clean:
 					-V theme=Malmoe                                             \
 					-V colortheme=seahorse                                      \
 					-V fonttheme=structuresmallcapsserif                        \
-					-V fontsize=8pt
+					-V fontsize=8pt																							\
+					--filter ./svg-images.py
 
 %.html: %.md
 	@$(info [DOC] $< -> $@)
-	@pandoc -s $< --toc -f markdown -t revealjs -o $@ \
-					-V revealjs-url=https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0
+	@pandoc -S -s $< --toc -f markdown -t revealjs -o $@                           \
+					-V revealjs-url=https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0 \
+					--filter ./svg-images.py
