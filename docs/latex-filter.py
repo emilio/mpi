@@ -1,4 +1,4 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 
 """
 Pandoc filter to remove Horizontal rules and remove the
@@ -28,4 +28,3 @@ def behead(key, value, format, meta):
 
 if __name__ == "__main__":
   toJSONFilter(behead)
-  # sys.exit(1)
