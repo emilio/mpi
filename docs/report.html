@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="generator" content="pandoc">
+  <meta name="author" content="Emilio Cobos Álvarez">
+  <meta name="author" content="Konstantin Danielov Kostandev">
+  <meta name="author" content="Alberto González San Juan">
+  <meta name="author" content="Héctor Gonzalo Andrés">
+  <title>Práctica MPI</title>
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/reveal.css">
+  <style type="text/css">code{white-space: pre;}</style>
+  <style type="text/css">
+div.sourceCode { overflow-x: auto; }
+table.sourceCode, tr.sourceCode, td.lineNumbers, td.sourceCode {
+  margin: 0; padding: 0; vertical-align: baseline; border: none; }
+table.sourceCode { width: 100%; line-height: 100%; }
+td.lineNumbers { text-align: right; padding-right: 4px; padding-left: 4px; color: #aaaaaa; border-right: 1px solid #aaaaaa; }
+td.sourceCode { padding-left: 5px; }
+code > span.kw { color: #007020; font-weight: bold; } /* Keyword */
+code > span.dt { color: #902000; } /* DataType */
+code > span.dv { color: #40a070; } /* DecVal */
+code > span.bn { color: #40a070; } /* BaseN */
+code > span.fl { color: #40a070; } /* Float */
+code > span.ch { color: #4070a0; } /* Char */
+code > span.st { color: #4070a0; } /* String */
+code > span.co { color: #60a0b0; font-style: italic; } /* Comment */
+code > span.ot { color: #007020; } /* Other */
+code > span.al { color: #ff0000; font-weight: bold; } /* Alert */
+code > span.fu { color: #06287e; } /* Function */
+code > span.er { color: #ff0000; font-weight: bold; } /* Error */
+code > span.wa { color: #60a0b0; font-weight: bold; font-style: italic; } /* Warning */
+code > span.cn { color: #880000; } /* Constant */
+code > span.sc { color: #4070a0; } /* SpecialChar */
+code > span.vs { color: #4070a0; } /* VerbatimString */
+code > span.ss { color: #bb6688; } /* SpecialString */
+code > span.im { } /* Import */
+code > span.va { color: #19177c; } /* Variable */
+code > span.cf { color: #007020; font-weight: bold; } /* ControlFlow */
+code > span.op { color: #666666; } /* Operator */
+code > span.bu { } /* BuiltIn */
+code > span.ex { } /* Extension */
+code > span.pp { color: #bc7a00; } /* Preprocessor */
+code > span.at { color: #7d9029; } /* Attribute */
+code > span.do { color: #ba2121; font-style: italic; } /* Documentation */
+code > span.an { color: #60a0b0; font-weight: bold; font-style: italic; } /* Annotation */
+code > span.cv { color: #60a0b0; font-weight: bold; font-style: italic; } /* CommentVar */
+code > span.in { color: #60a0b0; font-weight: bold; font-style: italic; } /* Information */
+  </style>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/theme/white.css" id="theme">
+  <link rel="stylesheet" href="reveal-custom.css"/>
+  <!-- Printing and PDF exports -->
+  <script>
+    var link = document.createElement( 'link' );
+    link.rel = 'stylesheet';
+    link.type = 'text/css';
+    link.href = window.location.search.match( /print-pdf/gi ) ? 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/print/pdf.css' : 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/css/print/paper.css';
+    document.getElementsByTagName( 'head' )[0].appendChild( link );
+  </script>
+  <!--[if lt IE 9]>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/lib/js/html5shiv.js"></script>
+  <![endif]-->
+</head>
+<body>
+  <div class="reveal">
+    <div class="slides">
+
+<section>
+  <h1 class="title">Práctica MPI</h1>
+  <h1 class="subtitle">Arquitectura de Computadores - 2016</h1>
+  <h2 class="author">Emilio Cobos Álvarez</h2>
+  <h2 class="author">Konstantin Danielov Kostandev</h2>
+  <h2 class="author">Alberto González San Juan</h2>
+  <h2 class="author">Héctor Gonzalo Andrés</h2>
+</section>
+<section id="TOC">
+<ul>
+<li><a href="#/problema-a-resolver">Problema a resolver</a></li>
+<li><a href="#/primera-idea-work-stealing">Primera idea: Work Stealing</a></li>
+<li><a href="#/el-algoritmo">El algoritmo</a></li>
+<li><a href="#/modos-de-ejecución">Modos de ejecución</a></li>
+<li><a href="#/funcionamiento-del-programa">Funcionamiento del programa</a></li>
+<li><a href="#/tipos-de-datos">Tipos de datos</a></li>
+<li><a href="#/informe-en-csv">Informe en CSV</a></li>
+<li><a href="#/testing">Testing</a></li>
+<li><a href="#/generación-de-gráficas">Generación de gráficas</a></li>
+<li><a href="#/conclusión">Conclusión</a></li>
+<li><a href="#/preguntas">¿Preguntas?</a></li>
+<li><a href="#/fin">Fin</a></li>
+</ul>
+</section>
+
+<section id="problema-a-resolver" class="slide level1">
+<h1>Problema a resolver</h1>
+<p>Conseguir las cadenas originales a partir de los hash obtenidos mediante la utilización de la función <code>crypt()</code>.</p>
+<p>Esto se realizará mediante fuerza bruta, aprovechando la tecnología MPI para poder dividir el trabajo a realizar entre varios procesos y nodos de forma simple.</p>
+</section>
+<section id="primera-idea-work-stealing" class="slide level1">
+<h1>Primera idea: Work Stealing</h1>
+<p>Inicialmente tratamos de usar <strong>Work Stealing</strong>, es decir, <strong>paralelismo especulativo</strong>. Es un algoritmo que se basa en que uno o varios procesos tienen una cola de trabajo por hacer, pero otro proceso con la cola vacía puede efectivamente <em>robarle</em> el trabajo cuando su propia cola esté vacía.</p>
+<p>Los requerimientos del enunciado de la práctica hacían que la única forma viable fuera que el proceso 0 tuviera la única cola de trabajo.</p>
+<p>Por desgracia, <strong>no funcionó la implementación inicial</strong> (dos hilos sincronizados dentro del proceso 0), ya que las llamadas síncronas de MPI bloquean <strong>todo el proceso</strong>, no sólo el hilo.</p>
+<p>Hacerlo funcionar en nuestra implementación inicial <strong>sería viable</strong>, pero habría que hacer balance entre repartir trabajo y realizarlo.</p>
+</section>
+<section id="el-algoritmo" class="slide level1">
+<h1>El algoritmo</h1>
+<p>El algoritmo es una <strong>versión simplificada del Work Stealing</strong>, en la que el proceso 0 mantiene una cola de trabajos a realizar, y <strong>el resto de procesos piden al proceso cero</strong> según van pudiendo realizar un trabajo.</p>
+<p>De esta manera <strong>no todos los procesos tienen porqué realizar el mismo trabajo</strong>, y se evitan esperas de los procesos más rápidos.</p>
+</section>
+<section id="modos-de-ejecución" class="slide level1">
+<h1>Modos de ejecución</h1>
+<p>Aparte, tenemos dos modos de ejecución: <strong>síncrono y asíncrono</strong>.</p>
+<ul>
+<li>En el <strong>modo síncrono</strong> el proceso 0 se asegura de que todos han acabado de realizar los trabajos que tenían asignados antes de pasar a la siguiente contraseña.</li>
+<li>En el <strong>modo asíncrono</strong> nada más se encuentra la contraseña se pasa a la siguiente, lo que hace que <strong>el total de trabajo reportado para desencriptar una contraseña no sea exacto</strong>.</li>
+</ul>
+</section>
+<section id="funcionamiento-del-programa" class="slide level1">
+<h1>Funcionamiento del programa</h1>
+<p>Lo primero que realiza el programa es enterarse de cuántos procesos hay.</p>
+<ul>
+<li><p>Si <strong>sólo hay un proceso</strong>, al no haber otros procesos a los que asignar el trabajo, el proceso cero realiza un <strong>fallback secuencial</strong>, <code>sequential_fallback()</code>, en el que realiza todo el trabajo.</p></li>
+<li><p>Si hay procesos a los que distribuir el trabajo, se utiliza la estrategia comentada anteriormente.</p></li>
+</ul>
+</section>
+<section class="slide level1">
+
+<h2 id="un-sólo-proceso">Un sólo proceso</h2>
+<p>Será el proceso el que realice todos los trabajos. Para reutilizar lógica, genera un <code>job_t</code> que abarca todas las posibles combinaciones de cada contraseña, y lo procesa él mismo.</p>
+<h2 id="n-procesos-n---1-workers"><span class="math inline"><em>N</em></span> procesos (<span class="math inline"><em>N</em> − 1</span> <em>workers</em>)</h2>
+<p>El proceso cero ejecutará la función <code>dispatcher_thread()</code>, que se encargará de leer las contraseñas y distribuir el trabajo.</p>
+<p>Esa función fue inicialmente planteada para correr en un hilo diferente, por eso su signatura:</p>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="dt">void</span>* dispatcher_thread(<span class="dt">void</span>* arg);</code></pre></div>
+</section>
+<section class="slide level1">
+
+<h2 id="flujo-de-información">Flujo de información</h2>
+<p>El flujo de información es el siguiente:</p>
+<ol type="1">
+<li><p>El proceso 0 manda un objeto del tipo <code>epoch_info_t</code> al resto de procesos. Éste objeto contiene un contador monótono (que se usará para controlar la concurrencia en el modo asíncrono) y la contraseña a descifrar.</p></li>
+<li><p>El proceso cero escucha al resto de procesos continuamente, tanto por solicitudes de trabajo (<code>request_t</code>), como para respuestas de cómo ha ido el trabajo (<code>reply_t</code>).</p>
+<ol type="1">
+<li><p>Si le llega una solicitud, envía el siguiente trabajo a realizar, o si no hay más un trabajo marcado como inválido (<code>is_valid = 0</code>).</p></li>
+<li><p>Si le llega una respuesta, actualiza los datos del trabajo realizado por el <em>worker</em>, y si es correcta bien espera al resto (síncrono), o pasa a la siguiente fase (asíncrono).</p></li>
+</ol></li>
+<li><p>El <em>worker</em> lee el mensaje de información (<code>epoch_info_t</code>), y si es válido realiza una petición de trabajo y aguarda el trabajo. Si el trabajo es válido, lo realiza y reporta al proceso cero las iteraciones que ha realizado y si ha encontrado la contraseña. Si no, vuelve a esperar un mensaje para la siguiente contraseña.</p></li>
+</ol>
+</section>
+<section id="tipos-de-datos" class="slide level1">
+<h1>Tipos de datos</h1>
+<p>Aparte del tipo de información <code>job_t</code>, que representa un trabajo, y que ya hemos visto, tenemos toda una serie de tipos de datos que permiten la comunicación correcta entre los procesos.</p>
+</section>
+<section class="slide level1">
+
+<h2 id="información-de-la-época-epoch_info_t">Información de la &quot;época&quot; (<code>epoch_info_t</code>)</h2>
+<p>Ya hemos discutido este tipo de dato anteriormente, aquí está la definición:</p>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">// src/epoch_info.h</span>
+<span class="co">// This is the struct sent to signify the start of a new epoch.</span>
+<span class="co">// It contains the password to decrypt and the epoch itself.</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> epoch_info {
+    <span class="dt">uint32_t</span> epoch;
+    <span class="dt">char</span> password[CRYPT_PASSWORD_LEN + <span class="dv">1</span>];
+} epoch_info_t;</code></pre></div>
+<p>Para representar el fin del trabajo se enviará una cadena vacía en el campo de la contraseña (y adicionalmente <code>-1</code> en el campo <code>epoch</code>, es decir, el máximo valor posible).</p>
+</section>
+<section class="slide level1">
+
+<h2 id="solicitud-de-trabajo-request_t">Solicitud de trabajo (<code>request_t</code>)</h2>
+<p>Los <em>workers</em> enviarán este objeto para informar al proceso cero de que están listos para realizar un trabajo. Contiene sólo el <code>epoch</code> en el que están los hijos, para que el proceso padre pueda saber si la contraseña que están descifrando sigue activa y, si no es el caso, pueda enviarles un trabajo inválido para que se muevan a la siguiente<a href="#/fn1" class="footnoteRef" id="fnref1"><sup>1</sup></a>.</p>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">// src/request.h</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> request { <span class="dt">uint32_t</span> epoch; } request_t;</code></pre></div>
+</section>
+<section class="slide level1">
+
+<h2 id="trabajo-job_t">Trabajo (<code>job_t</code>)</h2>
+<p>Es una de las estructuras centrales, que contiene si es válido (<code>is_valid</code>), en qué contraseña tiene que empezar (<code>start</code>), cuántas contraseñas tiene que comprobar (<code>length</code>), y el <code>epoch</code> al que corresponde el trabajo.</p>
+<p>La longitud por defecto del trabajo (<code>JOB_SIZE</code>, por defecto 5000), es un parámetro interesante que puede tener impacto tanto en el rendimiento como en la responsividad del programa.</p>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">// src/job.h</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> job {
+    <span class="co">// A job can only be processed if it&#39;s valid.</span>
+    <span class="co">// An invalid job is returned if there is no more</span>
+    <span class="co">// remaining work to do.</span>
+    <span class="dt">uint8_t</span> is_valid;
+    <span class="co">// The first password you&#39;d want to check.</span>
+    <span class="dt">uint32_t</span> start;
+    <span class="co">// How many passwords you have to check.</span>
+    <span class="dt">uint32_t</span> length;
+    <span class="co">// A monothonic counter used to identify a batch of</span>
+    <span class="co">// job/request pairs.</span>
+    <span class="dt">uint32_t</span> epoch;
+} job_t;</code></pre></div>
+</section>
+<section class="slide level1">
+
+<h2 id="respuesta-reply_t">Respuesta (<code>reply_t</code>)</h2>
+<p>Cuando un proceso acaba un trabajo que le había sido asignado, responde al proceso cero con éste objeto, que indica la <code>epoch</code>, cuántas iteraciones ha realizado (<code>try_count</code>), si ha conseguido encontrar la contraseña (<code>is_success</code>), y si es así cuál es (<code>decrypted</code>).</p>
+<div class="sourceCode"><pre class="sourceCode c"><code class="sourceCode c"><span class="co">// src/reply.h</span>
+<span class="kw">typedef</span> <span class="kw">struct</span> reply {
+    <span class="dt">uint8_t</span> is_success;
+    <span class="dt">uint32_t</span> try_count;
+    <span class="dt">uint32_t</span> epoch;
+    <span class="dt">char</span> decrypted[MPI_DECRYPTED_PASSWORD_LEN + <span class="dv">1</span>];
+} reply_t;</code></pre></div>
+</section>
+<section id="informe-en-csv" class="slide level1">
+<h1>Informe en CSV</h1>
+<p>Cuando corres el proceso con una configuración determinada se genera un archivo csv en la carpeta <code>bench/data</code> cuyo nombre depende exclusivamente de esa configuración.</p>
+<p>Cada línea del archivo tendrá los resultados de descifrar cada una de las contraseñas.</p>
+<p>El nombre del archivo <strong>depende del modo de compilación y ejecución, del número de procesos, del número de contraseñas, y de un hash de esas contraseñas</strong> (usando la función <code>crypt()</code>).</p>
+<p>Se puede ver el código relevante en los archivos <code>src/csv.h</code> y <code>src/csv.c</code>.</p>
+</section>
+<section id="testing" class="slide level1">
+<h1>Testing</h1>
+<p>Se ha llegado a probar <strong>hasta con 250 procesos en 25 ordenadores distintos</strong>. En la carpeta <code>bench/</code> se encuentran los scripts utilizados para automatizar la tarea de subir el programa compilado a los ordenadores (<code>bench/add-ssh</code>), y de probar diferentes configuraciones (<code>bench/bench-local</code>).</p>
+</section>
+<section id="generación-de-gráficas" class="slide level1">
+<h1>Generación de gráficas</h1>
+<p>Con la cantidad enorme de datos generados en CSV, está claro que no íbamos a hacer todas las gráficas manualmente. Por eso también existe un script (<code>bench/gen-graphics.py</code>), que utiliza el módulo <code>matplotlib</code> de Python para generarlas.</p>
+</section>
+<section id="conclusión" class="slide level1">
+<h1>Conclusión</h1>
+<p>% TODO</p>
+</section>
+<section id="preguntas" class="slide level1">
+<h1>¿Preguntas?</h1>
+</section>
+<section id="fin" class="slide level1">
+<h1>Fin</h1>
+<figure>
+<img src="marx-bio.jpg" alt="Ningún trabajador fue herido durante esta práctica" /><figcaption>Ningún trabajador fue herido durante esta práctica</figcaption>
+</figure>
+</section>
+<section class="footnotes">
+<hr />
+<ol>
+<li id="fn1"><p>Nótese que esto sólo puede pasar en modo asíncrono, si pasara en modo síncrono el programa acabaría abruptamente porque sería un error lógico.<a href="#/fnref1">↩</a></p></li>
+</ol>
+</section>
+    </div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/lib/js/head.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/js/reveal.js"></script>
+
+  <script>
+
+      // Full list of configuration options available at:
+      // https://github.com/hakimel/reveal.js#configuration
+      Reveal.initialize({
+
+        // Optional reveal.js plugins
+        dependencies: [
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/lib/js/classList.js', condition: function() { return !document.body.classList; } },
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/plugin/zoom-js/zoom.js', async: true },
+          { src: 'https://cdnjs.cloudflare.com/ajax/libs/reveal.js/3.2.0/plugin/notes/notes.js', async: true }
+        ]
+      });
+    </script>
+    </body>
+</html>
